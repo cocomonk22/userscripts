@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Google Home Camera
 // @namespace    http://tampermonkey.net/
-// @version      1.5
-// @description  Sync USB mic and speaker states with the web buttons, only on Google Home camera list pages.
+// @version      1.6
+// @description  Sync USB mic and speaker states with the web buttons, only on Google Home camera list pages. Includes Push-to-Talk (PTT) functionality.
 // @author       cocomonk22
 // @match        https://home.google.com/*
 // @grant        none
@@ -16,9 +16,10 @@
     let intervalId = null; // To store the interval ID for mic and speaker sync
     let onCameraListPage = false; // Track if we are on the camera list page
     let apiCallInProgress = false; // Prevent multiple API calls from being made simultaneously
+    let mouseDown = false; // Track if the left mouse button is held down for PTT
 
     // Parameters to enable or disable mic and speaker sync
-    const micSyncEnabled = false; // Set to false to disable mic syncing
+    const micSyncEnabled = true; // Set to true to enable mic syncing and disable PTT functionality
     const speakerSyncEnabled = true; // Set to false to disable speaker syncing
 
     // Function that runs when the URL matches the camera list page
@@ -37,6 +38,53 @@
             }
         }
 
+        // Function to unmute or mute mic based on mouse button state (PTT)
+        function pushToTalk(micButton) {
+            if (mouseDown && micButton) {
+                const micIcon = micButton.querySelector('mat-icon');
+                const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+
+                // If PTT is active and mic is muted, unmute it
+                if (micButtonState === 'mic_off') {
+                    clickButton(micButton, "Mic");
+                }
+            } else if (!mouseDown && micButton) {
+                const micIcon = micButton.querySelector('mat-icon');
+                const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+
+                // If PTT is not active and mic is unmuted, mute it
+                if (micButtonState === 'mic_none') {
+                    clickButton(micButton, "Mic");
+                }
+            }
+        }
+
+        // Function to sync mic state with server if micSyncEnabled is true
+        async function syncMicWithServer(micButton) {
+            apiCallInProgress = true; // Prevent overlapping API calls
+
+            try {
+                const response = await fetch('http://localhost:5000/mic_state');
+                const data = await response.json();
+                const micStateFromServer = data.state;
+
+                // Get the current mic button state
+                const micIcon = micButton.querySelector('mat-icon');
+                const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+
+                // Compare and sync mic states if necessary
+                if (micStateFromServer === 'muted' && micButtonState !== 'mic_off') {
+                    clickButton(micButton, "Mic");
+                } else if (micStateFromServer === 'unmuted' && micButtonState !== 'mic_none') {
+                    clickButton(micButton, "Mic");
+                }
+            } catch (error) {
+                console.error('Error fetching mic state:', error);
+            } finally {
+                apiCallInProgress = false; // Reset flag when API call is finished
+            }
+        }
+
         // Function to detect and sync mic and speaker states
         async function syncStates() {
             if (!onCameraListPage || apiCallInProgress) return; // Stop execution if we're not on the camera list page or API call is in progress
@@ -45,30 +93,18 @@
             if (micSyncEnabled) {
                 const micButton = document.querySelector('.talkback.mat-mdc-fab');
                 if (micButton) {
-                    // Only fetch mic state if the button exists
-                    apiCallInProgress = true; // Set flag to indicate that API call is in progress
-                    try {
-                        const response = await fetch('http://localhost:5000/mic_state');
-                        const data = await response.json();
-                        const micStateFromServer = data.state;
-
-                        // Get the current mic button state
-                        const micIcon = micButton.querySelector('mat-icon');
-                        const micButtonState = micIcon ? micIcon.textContent.trim() : null;
-
-                        // Compare and sync mic states if necessary
-                        if (micStateFromServer === 'muted' && micButtonState !== 'mic_off') {
-                            clickButton(micButton, "Mic");
-                        } else if (micStateFromServer === 'unmuted' && micButtonState !== 'mic_none') {
-                            clickButton(micButton, "Mic");
-                        }
-                    } catch (error) {
-                        console.error('Error fetching mic state:', error);
-                    } finally {
-                        apiCallInProgress = false; // Reset flag when API call is finished
-                    }
+                    // Sync mic state using the server's API
+                    await syncMicWithServer(micButton);
                 } else {
                     console.log("Mic button not found, skipping sync.");
+                }
+            }
+
+            // Handle Push-to-Talk (PTT) functionality if micSyncEnabled is false
+            if (!micSyncEnabled) {
+                const micButton = document.querySelector('.talkback.mat-mdc-fab');
+                if (micButton) {
+                    pushToTalk(micButton);
                 }
             }
 
@@ -139,4 +175,18 @@
 
     // Observe changes in the body element, you can adjust this to specific parts of the DOM if needed
     observer.observe(document.body, { childList: true, subtree: true });
+
+    // Handle Push-to-Talk (PTT) with left mouse button
+    window.addEventListener('mousedown', function(event) {
+        if (event.button === 0) { // Left mouse button is pressed
+            mouseDown = true;
+        }
+    });
+
+    window.addEventListener('mouseup', function(event) {
+        if (event.button === 0) { // Left mouse button is released
+            mouseDown = false;
+        }
+    });
+
 })();
