@@ -22,106 +22,105 @@
     const micSyncEnabled = false; // Set to true to enable mic syncing and disable PTT functionality
     const speakerSyncEnabled = true; // Set to false to disable speaker syncing
 
+    // Function to simulate a click on a button
+    function clickButton(button, buttonType) {
+        if (button) {
+            button.click();
+            console.log(`${buttonType} button clicked to sync state.`);
+        } else {
+            console.log(`${buttonType} button not found!`);
+        }
+    }
+
+    // Function to unmute or mute mic based on mouse button state (PTT)
+    function pushToTalk(micButton) {
+        if (mouseDown && micButton) {
+            const micIcon = micButton.querySelector('mat-icon');
+            const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+
+            // If PTT is active and mic is muted, unmute it
+            if (micButtonState === 'mic_off') {
+                clickButton(micButton, "Mic");
+            }
+        } else if (!mouseDown && micButton) {
+            const micIcon = micButton.querySelector('mat-icon');
+            const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+
+            // If PTT is not active and mic is unmuted, mute it
+            if (micButtonState === 'mic_none') {
+                clickButton(micButton, "Mic");
+            }
+        }
+    }
+
+    // Function to sync mic state with server if micSyncEnabled is true
+    async function syncMicWithServer(micButton) {
+        apiCallInProgress = true; // Prevent overlapping API calls
+
+        try {
+            const response = await fetch('http://localhost:5000/mic_state');
+            const data = await response.json();
+            const micStateFromServer = data.state;
+
+            // Get the current mic button state
+            const micIcon = micButton.querySelector('mat-icon');
+            const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+
+            // Compare and sync mic states if necessary
+            if (micStateFromServer === 'muted' && micButtonState !== 'mic_off') {
+                clickButton(micButton, "Mic");
+            } else if (micStateFromServer === 'unmuted' && micButtonState !== 'mic_none') {
+                clickButton(micButton, "Mic");
+            }
+        } catch (error) {
+            console.error('Error fetching mic state:', error);
+        } finally {
+            apiCallInProgress = false; // Reset flag when API call is finished
+        }
+    }
+
+    // Function to detect and sync mic and speaker states
+    async function syncStates() {
+        if (!onCameraListPage || apiCallInProgress) return; // Stop execution if we're not on the camera list page or API call is in progress
+
+        // Sync mic state if micSyncEnabled is true
+        const micButton = document.querySelector('.talkback.mat-mdc-fab');
+        if (micSyncEnabled) {
+            if (micButton) {
+                // Sync mic state using the server's API
+                await syncMicWithServer(micButton);
+            } else {
+                console.log("Mic button not found, skipping sync.");
+            }
+        }
+
+        // Handle Push-to-Talk (PTT) functionality if micSyncEnabled is false
+        if (!micSyncEnabled) {
+            if (micButton) {
+                pushToTalk(micButton);
+            }
+        }
+
+        // Sync speaker state if speakerSyncEnabled is true
+        if (speakerSyncEnabled) {
+            const speakerButton = document.querySelector('button[aria-label*="Unmute"] mat-icon, button[aria-label*="mute"] mat-icon');
+            if (speakerButton) {
+                const speakerIcon = speakerButton.textContent.trim();
+                if (speakerIcon === 'volume_off') {
+                    // If the speaker is muted, click the button to unmute
+                    clickButton(speakerButton.closest('button'), "Speaker");
+                }
+            } else {
+                console.log("Speaker button not found, skipping sync.");
+            }
+        }
+    }
+
     // Function that runs when the URL matches the camera list page
     function startSync() {
         console.log("On camera list page! Starting sync...");
 
         const stateCheckInterval = 1000; // Check mic and speaker state every 1 second
-
-        // Function to simulate a click on a button
-        function clickButton(button, buttonType) {
-            if (button) {
-                button.click();
-                console.log(`${buttonType} button clicked to sync state.`);
-            } else {
-                console.log(`${buttonType} button not found!`);
-            }
-        }
-
-        // Function to unmute or mute mic based on mouse button state (PTT)
-        function pushToTalk(micButton) {
-            if (mouseDown && micButton) {
-                const micIcon = micButton.querySelector('mat-icon');
-                const micButtonState = micIcon ? micIcon.textContent.trim() : null;
-
-                // If PTT is active and mic is muted, unmute it
-                if (micButtonState === 'mic_off') {
-                    clickButton(micButton, "Mic");
-                }
-            } else if (!mouseDown && micButton) {
-                const micIcon = micButton.querySelector('mat-icon');
-                const micButtonState = micIcon ? micIcon.textContent.trim() : null;
-
-                // If PTT is not active and mic is unmuted, mute it
-                if (micButtonState === 'mic_none') {
-                    clickButton(micButton, "Mic");
-                }
-            }
-        }
-
-        // Function to sync mic state with server if micSyncEnabled is true
-        async function syncMicWithServer(micButton) {
-            apiCallInProgress = true; // Prevent overlapping API calls
-
-            try {
-                const response = await fetch('http://localhost:5000/mic_state');
-                const data = await response.json();
-                const micStateFromServer = data.state;
-
-                // Get the current mic button state
-                const micIcon = micButton.querySelector('mat-icon');
-                const micButtonState = micIcon ? micIcon.textContent.trim() : null;
-
-                // Compare and sync mic states if necessary
-                if (micStateFromServer === 'muted' && micButtonState !== 'mic_off') {
-                    clickButton(micButton, "Mic");
-                } else if (micStateFromServer === 'unmuted' && micButtonState !== 'mic_none') {
-                    clickButton(micButton, "Mic");
-                }
-            } catch (error) {
-                console.error('Error fetching mic state:', error);
-            } finally {
-                apiCallInProgress = false; // Reset flag when API call is finished
-            }
-        }
-
-        // Function to detect and sync mic and speaker states
-        async function syncStates() {
-            if (!onCameraListPage || apiCallInProgress) return; // Stop execution if we're not on the camera list page or API call is in progress
-
-            // Sync mic state if micSyncEnabled is true
-            if (micSyncEnabled) {
-                const micButton = document.querySelector('.talkback.mat-mdc-fab');
-                if (micButton) {
-                    // Sync mic state using the server's API
-                    await syncMicWithServer(micButton);
-                } else {
-                    console.log("Mic button not found, skipping sync.");
-                }
-            }
-
-            // Handle Push-to-Talk (PTT) functionality if micSyncEnabled is false
-            if (!micSyncEnabled) {
-                const micButton = document.querySelector('.talkback.mat-mdc-fab');
-                if (micButton) {
-                    pushToTalk(micButton);
-                }
-            }
-
-            // Sync speaker state if speakerSyncEnabled is true
-            if (speakerSyncEnabled) {
-                const speakerButton = document.querySelector('button[aria-label*="Unmute"] mat-icon, button[aria-label*="mute"] mat-icon');
-                if (speakerButton) {
-                    const speakerIcon = speakerButton.textContent.trim();
-                    if (speakerIcon === 'volume_off') {
-                        // If the speaker is muted, click the button to unmute
-                        clickButton(speakerButton.closest('button'), "Speaker");
-                    }
-                } else {
-                    console.log("Speaker button not found, skipping sync.");
-                }
-            }
-        }
 
         // Set an interval to check mic and speaker sync every second (only when on the camera list page)
         intervalId = setInterval(syncStates, stateCheckInterval);
@@ -143,6 +142,7 @@
         const currentURL = window.location.href;
         if (currentURL.match(/\/cameras\/list\//)) {
             if (!intervalId) { // Only start sync if it's not already running
+                onCameraListPage = true;
                 startSync();
             }
         } else {
