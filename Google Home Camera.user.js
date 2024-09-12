@@ -18,7 +18,7 @@
     let apiCallInProgress = false; // Prevent multiple API calls from being made simultaneously
 
     // Parameters to enable or disable mic and speaker sync
-    const micSyncEnabled = true; // Set to false to disable mic syncing
+    const micSyncEnabled = false; // Set to false to disable mic syncing
     const speakerSyncEnabled = true; // Set to false to disable speaker syncing
 
     // Function that runs when the URL matches the camera list page
