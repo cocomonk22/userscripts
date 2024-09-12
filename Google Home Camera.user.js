@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Home Camera
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @description  Sync USB mic and speaker states with the web buttons, only on Google Home camera list pages. Includes Push-to-Talk (PTT) functionality.
 // @author       cocomonk22
 // @match        https://home.google.com/*
@@ -19,7 +19,7 @@
     let mouseDown = false; // Track if the left mouse button is held down for PTT
 
     // Parameters to enable or disable mic and speaker sync
-    const micSyncEnabled = true; // Set to true to enable mic syncing and disable PTT functionality
+    const micSyncEnabled = false; // Set to true to enable mic syncing and disable PTT functionality
     const speakerSyncEnabled = true; // Set to false to disable speaker syncing
 
     // Function that runs when the URL matches the camera list page
