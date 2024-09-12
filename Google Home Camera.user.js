@@ -6,8 +6,8 @@
 // @author       cocomonk22
 // @match        https://home.google.com/*
 // @grant        none
-// @updateURL    none
-// @downloadURL  none
+// @updateURL    https://github.com/cocomonk22/userscripts/raw/main/Google%20Home%20Camera.user.js
+// @downloadURL  https://github.com/cocomonk22/userscripts/raw/main/Google%20Home%20Camera.user.js
 // ==/UserScript==
 
 (function() {
