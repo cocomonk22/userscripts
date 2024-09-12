@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Google Home Camera
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Sync USB mic and speaker states with the web buttons, only on Google Home camera list pages.
 // @author       cocomonk22
 // @match        https://home.google.com/*
@@ -17,10 +17,13 @@
     let onCameraListPage = false; // Track if we are on the camera list page
     let apiCallInProgress = false; // Prevent multiple API calls from being made simultaneously
 
+    // Parameters to enable or disable mic and speaker sync
+    const micSyncEnabled = true; // Set to false to disable mic syncing
+    const speakerSyncEnabled = true; // Set to false to disable speaker syncing
+
     // Function that runs when the URL matches the camera list page
     function startSync() {
-        console.log("On camera list page! Starting mic and speaker sync...");
-        onCameraListPage = true; // Set the state to indicate we are on the correct page
+        console.log("On camera list page! Starting sync...");
 
         const stateCheckInterval = 1000; // Check mic and speaker state every 1 second
 
@@ -38,45 +41,49 @@
         async function syncStates() {
             if (!onCameraListPage || apiCallInProgress) return; // Stop execution if we're not on the camera list page or API call is in progress
 
-            // Check for mic button
-            const micButton = document.querySelector('.talkback.mat-mdc-fab');
-            if (micButton) {
-                // Only fetch mic state if the button exists
-                apiCallInProgress = true; // Set flag to indicate that API call is in progress
-                try {
-                    const response = await fetch('http://localhost:5000/mic_state');
-                    const data = await response.json();
-                    const micStateFromServer = data.state;
+            // Sync mic state if micSyncEnabled is true
+            if (micSyncEnabled) {
+                const micButton = document.querySelector('.talkback.mat-mdc-fab');
+                if (micButton) {
+                    // Only fetch mic state if the button exists
+                    apiCallInProgress = true; // Set flag to indicate that API call is in progress
+                    try {
+                        const response = await fetch('http://localhost:5000/mic_state');
+                        const data = await response.json();
+                        const micStateFromServer = data.state;
 
-                    // Get the current mic button state
-                    const micIcon = micButton.querySelector('mat-icon');
-                    const micButtonState = micIcon ? micIcon.textContent.trim() : null;
+                        // Get the current mic button state
+                        const micIcon = micButton.querySelector('mat-icon');
+                        const micButtonState = micIcon ? micIcon.textContent.trim() : null;
 
-                    // Compare and sync mic states if necessary
-                    if (micStateFromServer === 'muted' && micButtonState !== 'mic_off') {
-                        clickButton(micButton, "Mic");
-                    } else if (micStateFromServer === 'unmuted' && micButtonState !== 'mic_none') {
-                        clickButton(micButton, "Mic");
+                        // Compare and sync mic states if necessary
+                        if (micStateFromServer === 'muted' && micButtonState !== 'mic_off') {
+                            clickButton(micButton, "Mic");
+                        } else if (micStateFromServer === 'unmuted' && micButtonState !== 'mic_none') {
+                            clickButton(micButton, "Mic");
+                        }
+                    } catch (error) {
+                        console.error('Error fetching mic state:', error);
+                    } finally {
+                        apiCallInProgress = false; // Reset flag when API call is finished
                     }
-                } catch (error) {
-                    console.error('Error fetching mic state:', error);
-                } finally {
-                    apiCallInProgress = false; // Reset flag when API call is finished
+                } else {
+                    console.log("Mic button not found, skipping sync.");
                 }
-            } else {
-                console.log("Mic button not found, skipping sync.");
             }
 
-            // Check for speaker button
-            const speakerButton = document.querySelector('button[aria-label*="Unmute"] mat-icon, button[aria-label*="mute"] mat-icon');
-            if (speakerButton) {
-                const speakerIcon = speakerButton.textContent.trim();
-                if (speakerIcon === 'volume_off') {
-                    // If the speaker is muted, click the button to unmute
-                    clickButton(speakerButton.closest('button'), "Speaker");
+            // Sync speaker state if speakerSyncEnabled is true
+            if (speakerSyncEnabled) {
+                const speakerButton = document.querySelector('button[aria-label*="Unmute"] mat-icon, button[aria-label*="mute"] mat-icon');
+                if (speakerButton) {
+                    const speakerIcon = speakerButton.textContent.trim();
+                    if (speakerIcon === 'volume_off') {
+                        // If the speaker is muted, click the button to unmute
+                        clickButton(speakerButton.closest('button'), "Speaker");
+                    }
+                } else {
+                    console.log("Speaker button not found, skipping sync.");
                 }
-            } else {
-                console.log("Speaker button not found, skipping sync.");
             }
         }
 
