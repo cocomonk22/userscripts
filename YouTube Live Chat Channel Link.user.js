@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Live Chat Channel Link
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.0
 // @description  Make usernames in YouTube live chat open the channel on click with tooltip "Open channel" on hover.
 // @author       You
 // @match        https://www.youtube.com/live_chat*
