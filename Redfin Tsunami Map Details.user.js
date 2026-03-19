@@ -93,7 +93,7 @@
     }
 
     function insertTsunamiButton(grid) {
-        // Only insert if it doesn't exist AFTER Estimates
+        // Only insert if it doesn't exist BEFORE Flood
         if (!grid.querySelector('.MapLayerButton .tsunami')) {
             const floodButton = Array.from(grid.querySelectorAll('.MapLayerButton'))
                 .find(btn => btn.querySelector('.MapLayerButton__label')?.textContent === 'Flood');
@@ -119,8 +119,8 @@
     function watchFlyout() {
         const flyoutGrids = document.querySelectorAll('.bp-MapControlsFlyout__Flyout--options-grid');
         flyoutGrids.forEach(grid => {
-            // Only observe the grid containing Estimates
-            if (Array.from(grid.querySelectorAll('.MapLayerButton__label')).some(l => l.textContent === 'Estimates')) {
+            // Only observe the grid containing Hidden
+            if (Array.from(grid.querySelectorAll('.MapLayerButton__label')).some(l => l.textContent === 'Hidden')) {
                 insertTsunamiButton(grid);
 
                 const observer = new MutationObserver(() => insertTsunamiButton(grid));
